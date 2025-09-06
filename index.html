@@ -1,12 +1,101 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>AtomoTech — Gestão</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  <title>AtomoTech — Sistema</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin:0; background:#f4f6f8; }
+    header { background:#0b66ff; color:white; padding:16px; text-align:center; font-size:20px; font-weight:bold; }
+    main { padding:20px; text-align:center; }
 
+    .btn {
+      display:inline-block; margin:8px; padding:12px 20px;
+      border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:bold;
+      color:white; transition:0.3s;
+    }
+    .btn:hover { opacity:0.85; }
+
+    /* Cores personalizadas */
+    .btn-green { background:#28a745; }
+    .btn-blue { background:#007bff; }
+    .btn-gold { background:#d4a017; }
+    .btn-grey { background:#6c757d; }
+    .btn-red { background:#dc3545; }
+
+    .section {
+      display:none; text-align:left; margin-top:20px;
+      background:white; padding:20px; border-radius:10px;
+      box-shadow:0 0 8px rgba(0,0,0,0.1);
+    }
+    label { display:block; margin-top:10px; }
+    input, textarea, select { width:100%; padding:8px; margin-top:4px; }
+    table { width:100%; border-collapse:collapse; margin-top:15px; }
+    table, th, td { border:1px solid #ccc; }
+    th, td { padding:8px; text-align:left; }
+  </style>
+</head>
+<body>
+  <header>AtomoTech — Sistema de Orçamentos & OS</header>
+  <main>
+    <button class="btn btn-green" onclick="abrirSecao('orcamento')">➕Novo Orçamento</button>
+    <button class="btn btn-blue" onclick="abrirSecao('os')">🛠 Nova Ordem de Serviço</button>
+    <button class="btn btn-gold" onclick="abrirSecao('consulta')">📋 Gerenciar Documentos</button>
+
+    <!-- Orçamento -->
+    <section id="orcamento" class="section">
+      <h2>Orçamento</h2>
+      <label>Cliente: <input type="text" id="orcCliente"></label>
+      <label>Descrição: <textarea id="orcDescricao"></textarea></label>
+      <h3>Itens</h3>
+      <table id="tabelaOrcamento">
+        <thead>
+          <tr><th>Descrição</th><th>Qtd</th><th>Valor Unit.</th><th>Total</th><th>Ação</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button class="btn btn-grey" onclick="adicionarItem('orcamento')">Adicionar Item</button>
+      <br>
+      <button class="btn btn-green" onclick="salvarRegistro('orcamento')">Salvar</button>
+      <button class="btn btn-grey" onclick="limparFormulario('orcamento')">Limpar</button>
+      <button class="btn btn-red" onclick="gerarPDFFromForm('orcamento')">Gerar PDF</button>
+      <button class="btn btn-blue" onclick="abrirSecao('')">Voltar</button>
+    </section>
+
+    <!-- OS -->
+    <section id="os" class="section">
+      <h2>Ordem de Serviço</h2>
+      <label>Cliente: <input type="text" id="osCliente"></label>
+      <label>Serviço: <textarea id="osServico"></textarea></label>
+      <label>Técnico Responsável: <input type="text" id="osTecnico"></label>
+      <h3>Equipamentos Usados</h3>
+      <table id="tabelaEquipamentos">
+        <thead>
+          <tr><th>Descrição</th><th>Qtd</th><th>Valor Unit.</th><th>Total</th><th>Ação</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button class="btn btn-grey" onclick="adicionarItem('equipamento')">Adicionar Equipamento</button>
+      <br>
+      <button class="btn btn-green" onclick="salvarRegistro('os')">Salvar</button>
+      <button class="btn btn-grey" onclick="limparFormulario('os')">Limpar</button>
+      <button class="btn btn-red" onclick="gerarPDFFromForm('os')">Gerar PDF</button>
+      <button class="btn btn-blue" onclick="abrirSecao('')">Voltar</button>
+    </section>
+
+    <!-- Consulta -->
+    <section id="consulta" class="section">
+      <h2>Consulta de Registros</h2>
+      <div id="listaRegistros"></div>
+      <button class="btn btn-blue" onclick="abrirSecao('')">Voltar</button>
+    </section>
+  </main>
+
+  <script>
+    // 🔹 Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyBUF-WA58TIK259hYy7HECYLRbhOyqR1pE",
       authDomain: "atomotech-sistema.firebaseapp.com",
@@ -16,247 +105,206 @@
       appId: "1:106133482163:web:0fdcd843ae3e778fe15ec6",
       measurementId: "G-34WWR2929E"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    function abrirSecao(secao) {
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      if (secao) document.getElementById(secao).style.display = 'block';
+      if (secao === 'consulta') carregarRegistros();
+    }
 
-    // Salvar Orçamento
-    async function salvarOrcamento(event) {
-      event.preventDefault();
-      const cliente = document.getElementById("orcCliente").value;
-      const descricao = document.getElementById("orcDescricao").value;
+    function gerarNumero(prefixo) {
+      const hoje = new Date();
+      const data = String(hoje.getDate()).padStart(2,'0') + String(hoje.getMonth()+1).padStart(2,'0') + String(hoje.getFullYear()).slice(-2);
+      const aleatorio = Math.floor(Math.random()*900+100);
+      return `${prefixo}-${data}-${aleatorio}`;
+    }
 
-      const itens = [];
-      document.querySelectorAll("#tabelaOrcamento tbody tr").forEach(row => {
-        const desc = row.children[0].children[0].value;
-        const qtd = parseFloat(row.children[1].children[0].value) || 0;
-        const val = parseFloat(row.children[2].children[0].value) || 0;
-        const total = parseFloat(row.children[3].children[0].value) || 0;
-        if (desc) {
-          itens.push({ descricao: desc, quantidade: qtd, valorUnitario: val, total });
-        }
+    function adicionarItem(tipo) {
+      const tabela = tipo === "orcamento" ? document.querySelector("#tabelaOrcamento tbody") : document.querySelector("#tabelaEquipamentos tbody");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input type="text"></td>
+        <td><input type="number" value="1" min="1"></td>
+        <td><input type="number" step="0.01" value="0"></td>
+        <td><input type="text" disabled></td>
+        <td><button onclick="this.parentElement.parentElement.remove()">Remover</button></td>
+      `;
+      tabela.appendChild(tr);
+      atualizarTotais();
+      tr.querySelectorAll("input").forEach(inp => inp.addEventListener("input", atualizarTotais));
+    }
+
+    function atualizarTotais() {
+      document.querySelectorAll("table tbody tr").forEach(tr => {
+        const qtd = tr.children[1].children[0].value;
+        const valor = tr.children[2].children[0].value;
+        tr.children[3].children[0].value = (qtd*valor).toFixed(2);
       });
+    }
 
-      try {
-        await addDoc(collection(db, "orcamentos"), {
-          cliente,
-          descricao,
-          itens,
-          criadoEm: new Date()
+    function salvarRegistro(tipo) {
+      const numero = gerarNumero(tipo === "orcamento" ? "ORC" : "OS");
+      let dados = { numero, data: new Date().toISOString() };
+
+      if (tipo === "orcamento") {
+        dados.cliente = document.getElementById("orcCliente").value;
+        dados.descricao = document.getElementById("orcDescricao").value;
+        dados.itens = [];
+        document.querySelectorAll("#tabelaOrcamento tbody tr").forEach(tr=>{
+          dados.itens.push({
+            desc: tr.children[0].children[0].value,
+            qtd: tr.children[1].children[0].value,
+            unit: tr.children[2].children[0].value,
+            total: tr.children[3].children[0].value
+          });
         });
-        alert("✅ Orçamento salvo com sucesso!");
-        limparOrcamento();
-        showPage("homePage");
-      } catch (e) {
-        console.error("Erro ao salvar orçamento: ", e);
-        alert("❌ Erro ao salvar orçamento.");
+      } else {
+        dados.cliente = document.getElementById("osCliente").value;
+        dados.servico = document.getElementById("osServico").value;
+        dados.tecnico = document.getElementById("osTecnico").value;
+        dados.equipamentos = [];
+        document.querySelectorAll("#tabelaEquipamentos tbody tr").forEach(tr=>{
+          dados.equipamentos.push({
+            desc: tr.children[0].children[0].value,
+            qtd: tr.children[1].children[0].value,
+            unit: tr.children[2].children[0].value,
+            total: tr.children[3].children[0].value
+          });
+        });
+      }
+
+      db.collection(tipo).add(dados).then(()=>{
+        alert("✅ Registro salvo com sucesso!");
+        limparFormulario(tipo);
+      });
+    }
+
+    function limparFormulario(tipo) {
+      if (tipo === "orcamento") {
+        document.getElementById("orcCliente").value="";
+        document.getElementById("orcDescricao").value="";
+        document.querySelector("#tabelaOrcamento tbody").innerHTML="";
+      } else {
+        document.getElementById("osCliente").value="";
+        document.getElementById("osServico").value="";
+        document.getElementById("osTecnico").value="";
+        document.querySelector("#tabelaEquipamentos tbody").innerHTML="";
       }
     }
 
-    // Salvar OS
-    async function salvarOS(event) {
-      event.preventDefault();
-      const cliente = document.getElementById("osCliente").value;
-      const servico = document.getElementById("osServico").value;
-      const responsavel = document.getElementById("osResponsavel").value;
-      const inicio = document.getElementById("osInicio").value;
-      const conclusao = document.getElementById("osConclusao").value;
-      const obs = document.getElementById("osObs").value;
-
-      const equipamentos = [];
-      document.querySelectorAll("#tabelaEquipamentos tbody tr").forEach(row => {
-        const desc = row.children[0].children[0].value;
-        const qtd = parseFloat(row.children[1].children[0].value) || 0;
-        if (desc) {
-          equipamentos.push({ descricao: desc, quantidade: qtd });
-        }
-      });
-
-      try {
-        await addDoc(collection(db, "ordensServico"), {
-          cliente,
-          servico,
-          responsavel,
-          inicio,
-          conclusao,
-          observacoes: obs,
-          equipamentos,
-          criadoEm: new Date()
+    function carregarRegistros() {
+      const lista = document.getElementById("listaRegistros");
+      lista.innerHTML = "";
+      ["orcamento","os"].forEach(tipo=>{
+        db.collection(tipo).get().then(snapshot=>{
+          snapshot.forEach(doc=>{
+            const d = doc.data();
+            const div = document.createElement("div");
+            div.innerHTML = `<b>${tipo.toUpperCase()}:</b> ${d.numero} — ${d.cliente} — ${new Date(d.data).toLocaleDateString()} <button class="btn btn-red" onclick="gerarPDF('${tipo}','${doc.id}')">Gerar PDF</button>`;
+            lista.appendChild(div);
+          });
         });
-        alert("✅ Ordem de Serviço salva com sucesso!");
-        limparOS();
-        showPage("homePage");
-      } catch (e) {
-        console.error("Erro ao salvar OS: ", e);
-        alert("❌ Erro ao salvar OS.");
+      });
+    }
+
+    // 🔹 PDF (mesma versão para formulário e consulta)
+    function gerarPDFFromForm(tipo) {
+      gerarPDFBase(tipo);
+      limparFormulario(tipo);
+      alert("📄 PDF gerado com sucesso!");
+    }
+
+    async function gerarPDF(tipo, id) {
+      const docRef = await db.collection(tipo).doc(id).get();
+      const dados = docRef.data();
+      gerarPDFBase(tipo, dados);
+    }
+
+    function gerarPDFBase(tipo, dados=null) {
+      const docPDF = new jspdf.jsPDF();
+      docPDF.addImage("logo.png", "PNG", 10, 10, 30, 30);
+
+      docPDF.setTextColor(200,200,200);
+      docPDF.setFontSize(60);
+      docPDF.text("ATOMOTECH", 105, 150, { align: "center", angle: 45 });
+
+      docPDF.setTextColor(0,0,0);
+      docPDF.setFontSize(16);
+      docPDF.text(`AtomoTech - ${tipo === "orcamento" ? "Orçamento" : "Ordem de Serviço"}`, 50, 20);
+
+      const numero = dados ? dados.numero : gerarNumero(tipo === "orcamento" ? "ORC" : "OS");
+      const cliente = dados ? dados.cliente : (tipo === "orcamento" ? document.getElementById("orcCliente").value : document.getElementById("osCliente").value);
+
+      docPDF.setFontSize(12);
+      docPDF.text(`Número: ${numero}`, 10, 50);
+      docPDF.text(`Cliente: ${cliente}`, 10, 60);
+      docPDF.text(`Data: ${new Date().toLocaleDateString()}`, 10, 70);
+
+      if (tipo === "os") {
+        const tecnico = dados ? dados.tecnico : document.getElementById("osTecnico").value;
+        docPDF.text(`Técnico: ${tecnico}`, 10, 80);
       }
-    }
 
-    window.salvarOrcamento = salvarOrcamento;
-    window.salvarOS = salvarOS;
-  </script>
-
-  <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f4f6f8; }
-    header { background:#0b66ff; color:white; padding:16px; display:flex; justify-content:space-between; align-items:center; }
-    header h1 { margin:0; font-size:22px; }
-    .container { padding:20px; }
-    .cards { display:flex; gap:20px; }
-    .card { background:white; border-radius:10px; padding:20px; text-align:center; flex:1; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
-    .card h3 { margin:10px 0; }
-    .card button { padding:10px 20px; border:none; border-radius:6px; cursor:pointer; font-size:14px; margin-top:10px; }
-    .btn-green { background:#28a745; color:white; }
-    .btn-blue { background:#007bff; color:white; }
-    .btn-gray { background:#4a4a4a; color:white; }
-    .hidden { display:none; }
-    form { background:white; padding:20px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); max-width:700px; margin:0 auto; }
-    form label { display:block; margin-top:10px; font-weight:bold; }
-    form input, form textarea { width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:6px; }
-    form table { width:100%; border-collapse:collapse; margin-top:15px; }
-    form th, form td { border:1px solid #ddd; padding:8px; text-align:center; }
-    form th { background:#f4f4f4; }
-    .actions { margin-top:20px; text-align:right; }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>AtomoTech</h1>
-  </header>
-
-  <div class="container">
-
-    <!-- Página Inicial -->
-    <div id="homePage">
-      <h2>Painel de Gestão</h2>
-      <div class="cards">
-        <div class="card">
-          <h3>📄 Novo Orçamento</h3>
-          <button class="btn-green" onclick="showPage('orcamentoPage')">Criar Orçamento</button>
-        </div>
-        <div class="card">
-          <h3>🔧 Nova Ordem de Serviço</h3>
-          <button class="btn-blue" onclick="showPage('osPage')">Criar OS</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Página Orçamento -->
-    <div id="orcamentoPage" class="hidden">
-      <h2>Novo Orçamento</h2>
-      <form onsubmit="salvarOrcamento(event)">
-        <label>Cliente</label>
-        <input type="text" id="orcCliente" placeholder="Nome do cliente">
-
-        <label>Descrição do Projeto</label>
-        <textarea id="orcDescricao" rows="3"></textarea>
-
-        <h3>Itens do Orçamento</h3>
-        <table id="tabelaOrcamento">
-          <thead>
-            <tr><th>Descrição</th><th>Qtd</th><th>Valor Unitário</th><th>Total</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <button type="button" class="btn-blue" onclick="addItem()">+ Adicionar Item</button>
-
-        <div class="actions">
-          <button type="button" class="btn-gray" onclick="limparOrcamento()">🧹 Limpar</button>
-          <button type="button" class="btn-gray" onclick="showPage('homePage')">⬅ Voltar</button>
-          <button type="submit" class="btn-green">Salvar</button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Página OS -->
-    <div id="osPage" class="hidden">
-      <h2>Nova Ordem de Serviço</h2>
-      <form onsubmit="salvarOS(event)">
-        <label>Cliente</label>
-        <input type="text" id="osCliente">
-
-        <label>Serviço</label>
-        <input type="text" id="osServico">
-
-        <label>Responsável Técnico</label>
-        <input type="text" id="osResponsavel">
-
-        <label>Data de Início</label>
-        <input type="date" id="osInicio">
-
-        <label>Data Prevista de Conclusão</label>
-        <input type="date" id="osConclusao">
-
-        <label>Observações</label>
-        <textarea id="osObs" rows="3"></textarea>
-
-        <h3>Equipamentos Usados</h3>
-        <table id="tabelaEquipamentos">
-          <thead>
-            <tr><th>Descrição</th><th>Qtd</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <button type="button" class="btn-blue" onclick="addEquipamento()">+ Adicionar Equipamento</button>
-
-        <div class="actions">
-          <button type="button" class="btn-gray" onclick="limparOS()">🧹 Limpar</button>
-          <button type="button" class="btn-gray" onclick="showPage('homePage')">⬅ Voltar</button>
-          <button type="submit" class="btn-blue">Salvar OS</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <script>
-    function showPage(pageId) {
-      document.querySelectorAll(".container > div").forEach(div => div.classList.add("hidden"));
-      document.getElementById(pageId).classList.remove("hidden");
-    }
-
-    // Orçamento
-    function addItem() {
-      const tabela = document.querySelector("#tabelaOrcamento tbody");
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td><input type="text"></td>
-        <td><input type="number" min="1" value="1"></td>
-        <td><input type="number" min="0" step="0.01"></td>
-        <td><input type="text" readonly></td>
-      `;
-      tabela.appendChild(row);
-
-      row.querySelectorAll("input").forEach(input => {
-        input.addEventListener("input", () => {
-          const qtd = parseFloat(row.children[1].children[0].value) || 0;
-          const val = parseFloat(row.children[2].children[0].value) || 0;
-          row.children[3].children[0].value = (qtd * val).toFixed(2);
+      let linhas = [];
+      if (tipo === "orcamento") {
+        const itens = dados ? dados.itens : [];
+        (itens.length ? itens : Array.from(document.querySelectorAll("#tabelaOrcamento tbody tr"))).forEach(tr=>{
+          if (dados) {
+            linhas.push([tr.desc,tr.qtd,tr.unit,tr.total]);
+          } else {
+            linhas.push([
+              tr.children[0].children[0].value,
+              tr.children[1].children[0].value,
+              tr.children[2].children[0].value,
+              tr.children[3].children[0].value
+            ]);
+          }
         });
-      });
-    }
-    function limparOrcamento() {
-      document.getElementById("orcCliente").value = "";
-      document.getElementById("orcDescricao").value = "";
-      document.querySelector("#tabelaOrcamento tbody").innerHTML = "";
-    }
+      } else {
+        const eqs = dados ? dados.equipamentos : [];
+        (eqs.length ? eqs : Array.from(document.querySelectorAll("#tabelaEquipamentos tbody tr"))).forEach(tr=>{
+          if (dados) {
+            linhas.push([tr.desc,tr.qtd,tr.unit,tr.total]);
+          } else {
+            linhas.push([
+              tr.children[0].children[0].value,
+              tr.children[1].children[0].value,
+              tr.children[2].children[0].value,
+              tr.children[3].children[0].value
+            ]);
+          }
+        });
+      }
 
-    // OS
-    function addEquipamento() {
-      const tabela = document.querySelector("#tabelaEquipamentos tbody");
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td><input type="text"></td>
-        <td><input type="number" min="1" value="1"></td>
-      `;
-      tabela.appendChild(row);
-    }
-    function limparOS() {
-      document.getElementById("osCliente").value = "";
-      document.getElementById("osServico").value = "";
-      document.getElementById("osResponsavel").value = "";
-      document.getElementById("osInicio").value = "";
-      document.getElementById("osConclusao").value = "";
-      document.getElementById("osObs").value = "";
-      document.querySelector("#tabelaEquipamentos tbody").innerHTML = "";
+      docPDF.autoTable({
+        head: [["Descrição", "Qtd", "Valor Unit.", "Total"]],
+        body: linhas,
+        startY: tipo === "orcamento" ? 90 : 100
+      });
+
+      const totalGeral = linhas.reduce((acc, l) => acc + parseFloat(l[3]||0), 0);
+      docPDF.text(`Total Geral: R$ ${totalGeral.toFixed(2)}`, 150, docPDF.lastAutoTable.finalY + 10);
+
+      let assinaturaY = docPDF.lastAutoTable.finalY + 40;
+      docPDF.line(20, assinaturaY, 90, assinaturaY);
+      docPDF.text("Assinatura do Cliente", 20, assinaturaY + 10);
+
+      if (tipo === "os") {
+        docPDF.line(120, assinaturaY, 190, assinaturaY);
+        docPDF.text("Assinatura do Técnico", 120, assinaturaY + 10);
+      }
+
+      const pageCount = docPDF.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        docPDF.setPage(i);
+        docPDF.setFontSize(10);
+        docPDF.setTextColor(100);
+        docPDF.text("AtomoTech • (11) 99999-9999 • contato@atomotech.com.br • www.atomotech.com.br", 105, 290, { align: "center" });
+      }
+
+      docPDF.save(`${tipo}-${numero}.pdf`);
     }
   </script>
 </body>
