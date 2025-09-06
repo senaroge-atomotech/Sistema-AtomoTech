@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>AtomoTech — Gestão</title>
+  <script type="module">
+    // Importando Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBUF-WA58TIK259hYy7HECYLRbhOyqR1pE",
+      authDomain: "atomotech-sistema.firebaseapp.com",
+      projectId: "atomotech-sistema",
+      storageBucket: "atomotech-sistema.firebasestorage.app",
+      messagingSenderId: "106133482163",
+      appId: "1:106133482163:web:0fdcd843ae3e778fe15ec6",
+      measurementId: "G-34WWR2929E"
+    };
+
+    // Inicializando Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Função salvar orçamento
+    async function salvarOrcamento(event) {
+      event.preventDefault();
+      const cliente = document.getElementById("orcCliente").value;
+      const descricao = document.getElementById("orcDescricao").value;
+
+      const itens = [];
+      document.querySelectorAll("#tabelaOrcamento tbody tr").forEach(row => {
+        const desc = row.children[0].children[0].value;
+        const qtd = parseFloat(row.children[1].children[0].value) || 0;
+        const val = parseFloat(row.children[2].children[0].value) || 0;
+        const total = parseFloat(row.children[3].children[0].value) || 0;
+        if (desc) {
+          itens.push({ descricao: desc, quantidade: qtd, valorUnitario: val, total });
+        }
+      });
+
+      try {
+        await addDoc(collection(db, "orcamentos"), {
+          cliente,
+          descricao,
+          itens,
+          criadoEm: new Date()
+        });
+        alert("✅ Orçamento salvo com sucesso!");
+        showPage("homePage");
+      } catch (e) {
+        console.error("Erro ao salvar orçamento: ", e);
+        alert("❌ Erro ao salvar orçamento.");
+      }
+    }
+
+    // Função salvar OS
+    async function salvarOS(event) {
+      event.preventDefault();
+      const cliente = document.getElementById("osCliente").value;
+      const servico = document.getElementById("osServico").value;
+      const responsavel = document.getElementById("osResponsavel").value;
+      const inicio = document.getElementById("osInicio").value;
+      const conclusao = document.getElementById("osConclusao").value;
+      const obs = document.getElementById("osObs").value;
+
+      try {
+        await addDoc(collection(db, "ordensServico"), {
+          cliente,
+          servico,
+          responsavel,
+          inicio,
+          conclusao,
+          observacoes: obs,
+          criadoEm: new Date()
+        });
+        alert("✅ Ordem de Serviço salva com sucesso!");
+        showPage("homePage");
+      } catch (e) {
+        console.error("Erro ao salvar OS: ", e);
+        alert("❌ Erro ao salvar OS.");
+      }
+    }
+
+    window.salvarOrcamento = salvarOrcamento;
+    window.salvarOS = salvarOS;
+  </script>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f4f6f8; }
+    header { background:#0b66ff; color:white; padding:16px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-size:22px; }
+    header .user-info { font-size:14px; }
+    .container { padding:20px; }
+    h2 { margin-bottom:20px; }
+    .cards { display:flex; gap:20px; }
+    .card {
+      background:white; border-radius:10px; padding:20px; text-align:center;
+      flex:1; box-shadow:0 2px 6px rgba(0,0,0,0.1);
+    }
+    .card h3 { margin:10px 0; }
+    .card button {
+      padding:10px 20px; border:none; border-radius:6px; cursor:pointer; font-size:14px; margin-top:10px;
+    }
+    .btn-green { background:#28a745; color:white; }
+    .btn-blue { background:#007bff; color:white; }
+    .btn-yellow { background:#b8860b; color:white; }
+    .btn-gray { background:#4a4a4a; color:white; }
+    .hidden { display:none; }
+    form { background:white; padding:20px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); max-width:700px; margin:0 auto; }
+    form label { display:block; margin-top:10px; font-weight:bold; }
+    form input, form textarea, form select {
+      width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:6px;
+    }
+    form table { width:100%; border-collapse:collapse; margin-top:15px; }
+    form th, form td { border:1px solid #ddd; padding:8px; text-align:center; }
+    form th { background:#f4f4f4; }
+    .actions { margin-top:20px; text-align:right; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AtomoTech</h1>
+    <div class="user-info">Conectado como — <button class="btn-gray">Sair</button></div>
+  </header>
+
+  <div class="container">
+
+    <!-- Página Inicial -->
+    <div id="homePage">
+      <h2>Painel de Gestão</h2>
+      <div class="cards">
+        <div class="card">
+          <h3>📄 Novo Orçamento</h3>
+          <p>Crie e envie orçamentos profissionais para seus clientes.</p>
+          <button class="btn-green" onclick="showPage('orcamentoPage')">Criar Orçamento</button>
+        </div>
+        <div class="card">
+          <h3>🔧 Nova Ordem de Serviço</h3>
+          <p>Gerencie serviços e colete assinaturas digitais.</p>
+          <button class="btn-blue" onclick="showPage('osPage')">Criar Ordem de Serviço</button>
+        </div>
+        <div class="card">
+          <h3>📂 Gerenciar Documentos</h3>
+          <p>Visualize e edite todas os seus orçamentos e ordens de serviço.</p>
+          <button class="btn-yellow">Gerenciar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Página de Orçamento -->
+    <div id="orcamentoPage" class="hidden">
+      <h2>Novo Orçamento</h2>
+      <form onsubmit="salvarOrcamento(event)">
+        <label>Cliente</label>
+        <input type="text" id="orcCliente" placeholder="Nome do cliente">
+        
+        <label>Descrição do Projeto</label>
+        <textarea id="orcDescricao" rows="3" placeholder="Detalhes do orçamento"></textarea>
+
+        <h3>Itens do Orçamento</h3>
+        <table id="tabelaOrcamento">
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Qtd</th>
+              <th>Valor Unitário (R$)</th>
+              <th>Total (R$)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <button type="button" class="btn-blue" onclick="addItem()">+ Adicionar Item</button>
+
+        <div class="actions">
+          <button type="button" class="btn-gray" onclick="showPage('homePage')">⬅ Voltar</button>
+          <button type="submit" class="btn-green">Salvar Orçamento</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Página de Ordem de Serviço -->
+    <div id="osPage" class="hidden">
+      <h2>Nova Ordem de Serviço</h2>
+      <form onsubmit="salvarOS(event)">
+        <label>Cliente</label>
+        <input type="text" id="osCliente" placeholder="Nome do cliente">
+
+        <label>Serviço</label>
+        <input type="text" id="osServico" placeholder="Ex: Instalação de sistema de câmeras">
+
+        <label>Responsável Técnico</label>
+        <input type="text" id="osResponsavel" placeholder="Nome do técnico responsável">
+
+        <label>Data de Início</label>
+        <input type="date" id="osInicio">
+
+        <label>Data Prevista de Conclusão</label>
+        <input type="date" id="osConclusao">
+
+        <label>Observações</label>
+        <textarea id="osObs" rows="3" placeholder="Detalhes adicionais"></textarea>
+
+        <div class="actions">
+          <button type="button" class="btn-gray" onclick="showPage('homePage')">⬅ Voltar</button>
+          <button type="submit" class="btn-blue">Salvar OS</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function showPage(pageId) {
+      document.getElementById('homePage').classList.add('hidden');
+      document.getElementById('orcamentoPage').classList.add('hidden');
+      document.getElementById('osPage').classList.add('hidden');
+      document.getElementById(pageId).classList.remove('hidden');
+    }
+
+    function addItem() {
+      const tabela = document.querySelector("#tabelaOrcamento tbody");
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><input type="text" placeholder="Ex: Câmera IP"></td>
+        <td><input type="number" min="1" value="1"></td>
+        <td><input type="number" min="0" step="0.01"></td>
+        <td><input type="text" readonly></td>
+      `;
+      tabela.appendChild(row);
+
+      row.querySelectorAll("input").forEach(input => {
+        input.addEventListener("input", () => {
+          const qtd = parseFloat(row.children[1].children[0].value) || 0;
+          const val = parseFloat(row.children[2].children[0].value) || 0;
+          row.children[3].children[0].value = (qtd * val).toFixed(2);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
