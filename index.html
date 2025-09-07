@@ -19,7 +19,7 @@
     }
     .btn:hover { opacity:0.85; }
 
-    /* Cores personalizadas */
+    /* Cores */
     .btn-green { background:#28a745; }
     .btn-blue { background:#007bff; }
     .btn-gold { background:#d4a017; }
@@ -36,14 +36,21 @@
     table { width:100%; border-collapse:collapse; margin-top:15px; }
     table, th, td { border:1px solid #ccc; }
     th, td { padding:8px; text-align:left; }
+
+    .registro {
+      padding:10px; margin:6px 0;
+      border:1px solid #ccc; border-radius:6px;
+      display:flex; justify-content:space-between; align-items:center;
+      background:#fdfdfd;
+    }
   </style>
 </head>
 <body>
   <header>AtomoTech — Sistema de Orçamentos & OS</header>
   <main>
-    <button class="btn btn-green" onclick="abrirSecao('orcamento')">➕Novo Orçamento</button>
-    <button class="btn btn-blue" onclick="abrirSecao('os')">🛠 Nova Ordem de Serviço</button>
-    <button class="btn btn-gold" onclick="abrirSecao('consulta')">📋 Gerenciar Documentos</button>
+    <button class="btn btn-green" onclick="abrirSecao('orcamento')">Criar Orçamento</button>
+    <button class="btn btn-blue" onclick="abrirSecao('os')">Criar Ordem de Serviço</button>
+    <button class="btn btn-gold" onclick="abrirSecao('consulta')">Gerenciar Documentos</button>
 
     <!-- Orçamento -->
     <section id="orcamento" class="section">
@@ -100,10 +107,9 @@
       apiKey: "AIzaSyBUF-WA58TIK259hYy7HECYLRbhOyqR1pE",
       authDomain: "atomotech-sistema.firebaseapp.com",
       projectId: "atomotech-sistema",
-      storageBucket: "atomotech-sistema.firebasestorage.app",
+      storageBucket: "atomotech-sistema.appspot.com",
       messagingSenderId: "106133482163",
-      appId: "1:106133482163:web:0fdcd843ae3e778fe15ec6",
-      measurementId: "G-34WWR2929E"
+      appId: "1:106133482163:web:0fdcd843ae3e778fe15ec6"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
@@ -144,7 +150,7 @@
       });
     }
 
-    function salvarRegistro(tipo) {
+    async function salvarRegistro(tipo) {
       const numero = gerarNumero(tipo === "orcamento" ? "ORC" : "OS");
       let dados = { numero, data: new Date().toISOString() };
 
@@ -175,10 +181,9 @@
         });
       }
 
-      db.collection(tipo).add(dados).then(()=>{
-        alert("✅ Registro salvo com sucesso!");
-        limparFormulario(tipo);
-      });
+      await db.collection(tipo).add(dados);
+      alert("✅ Registro salvo no banco!");
+      limparFormulario(tipo);
     }
 
     function limparFormulario(tipo) {
@@ -192,24 +197,47 @@
         document.getElementById("osTecnico").value="";
         document.querySelector("#tabelaEquipamentos tbody").innerHTML="";
       }
+      alert("🧹 Formulário limpo!");
     }
 
+    // 🔹 Consulta com atualização em tempo real
     function carregarRegistros() {
       const lista = document.getElementById("listaRegistros");
       lista.innerHTML = "";
+
       ["orcamento","os"].forEach(tipo=>{
-        db.collection(tipo).get().then(snapshot=>{
-          snapshot.forEach(doc=>{
-            const d = doc.data();
-            const div = document.createElement("div");
-            div.innerHTML = `<b>${tipo.toUpperCase()}:</b> ${d.numero} — ${d.cliente} — ${new Date(d.data).toLocaleDateString()} <button class="btn btn-red" onclick="gerarPDF('${tipo}','${doc.id}')">Gerar PDF</button>`;
-            lista.appendChild(div);
+        db.collection(tipo).orderBy("data","desc").onSnapshot(snapshot=>{
+          snapshot.docChanges().forEach(change=>{
+            if (change.type === "added") {
+              const d = change.doc.data();
+              const div = document.createElement("div");
+              div.className = "registro";
+              div.id = change.doc.id;
+              div.innerHTML = `
+                <span><b>${tipo.toUpperCase()}</b> — ${d.numero} — ${d.cliente} — ${new Date(d.data).toLocaleDateString()}</span>
+                <span>
+                  <button class="btn btn-blue" onclick="gerarPDF('${tipo}','${change.doc.id}')">PDF</button>
+                  <button class="btn btn-red" onclick="excluirRegistro('${tipo}','${change.doc.id}')">Excluir</button>
+                </span>
+              `;
+              lista.appendChild(div);
+            }
+            if (change.type === "removed") {
+              document.getElementById(change.doc.id)?.remove();
+            }
           });
         });
       });
     }
 
-    // 🔹 PDF (mesma versão para formulário e consulta)
+    async function excluirRegistro(tipo, id) {
+      if (confirm("❌ Deseja excluir este registro?")) {
+        await db.collection(tipo).doc(id).delete();
+        alert("Registro excluído!");
+      }
+    }
+
+    // 🔹 PDF
     function gerarPDFFromForm(tipo) {
       gerarPDFBase(tipo);
       limparFormulario(tipo);
@@ -224,27 +252,21 @@
 
     function gerarPDFBase(tipo, dados=null) {
       const docPDF = new jspdf.jsPDF();
-      docPDF.addImage("logo.png", "PNG", 10, 10, 30, 30);
 
-      docPDF.setTextColor(200,200,200);
-      docPDF.setFontSize(60);
-      docPDF.text("ATOMOTECH", 105, 150, { align: "center", angle: 45 });
-
-      docPDF.setTextColor(0,0,0);
       docPDF.setFontSize(16);
-      docPDF.text(`AtomoTech - ${tipo === "orcamento" ? "Orçamento" : "Ordem de Serviço"}`, 50, 20);
+      docPDF.text(`AtomoTech - ${tipo === "orcamento" ? "Orçamento" : "Ordem de Serviço"}`, 10, 20);
 
       const numero = dados ? dados.numero : gerarNumero(tipo === "orcamento" ? "ORC" : "OS");
       const cliente = dados ? dados.cliente : (tipo === "orcamento" ? document.getElementById("orcCliente").value : document.getElementById("osCliente").value);
 
       docPDF.setFontSize(12);
-      docPDF.text(`Número: ${numero}`, 10, 50);
-      docPDF.text(`Cliente: ${cliente}`, 10, 60);
-      docPDF.text(`Data: ${new Date().toLocaleDateString()}`, 10, 70);
+      docPDF.text(`Número: ${numero}`, 10, 40);
+      docPDF.text(`Cliente: ${cliente}`, 10, 50);
+      docPDF.text(`Data: ${new Date().toLocaleDateString()}`, 10, 60);
 
       if (tipo === "os") {
         const tecnico = dados ? dados.tecnico : document.getElementById("osTecnico").value;
-        docPDF.text(`Técnico: ${tecnico}`, 10, 80);
+        docPDF.text(`Técnico: ${tecnico}`, 10, 70);
       }
 
       let linhas = [];
@@ -281,28 +303,11 @@
       docPDF.autoTable({
         head: [["Descrição", "Qtd", "Valor Unit.", "Total"]],
         body: linhas,
-        startY: tipo === "orcamento" ? 90 : 100
+        startY: tipo === "orcamento" ? 80 : 90
       });
 
       const totalGeral = linhas.reduce((acc, l) => acc + parseFloat(l[3]||0), 0);
       docPDF.text(`Total Geral: R$ ${totalGeral.toFixed(2)}`, 150, docPDF.lastAutoTable.finalY + 10);
-
-      let assinaturaY = docPDF.lastAutoTable.finalY + 40;
-      docPDF.line(20, assinaturaY, 90, assinaturaY);
-      docPDF.text("Assinatura do Cliente", 20, assinaturaY + 10);
-
-      if (tipo === "os") {
-        docPDF.line(120, assinaturaY, 190, assinaturaY);
-        docPDF.text("Assinatura do Técnico", 120, assinaturaY + 10);
-      }
-
-      const pageCount = docPDF.internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        docPDF.setPage(i);
-        docPDF.setFontSize(10);
-        docPDF.setTextColor(100);
-        docPDF.text("AtomoTech • (11) 99999-9999 • contato@atomotech.com.br • www.atomotech.com.br", 105, 290, { align: "center" });
-      }
 
       docPDF.save(`${tipo}-${numero}.pdf`);
     }
