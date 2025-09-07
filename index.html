@@ -177,13 +177,6 @@
                     <label class="block mt-4 font-bold">Técnico Responsável</label>
                     <input type="text" id="osTecnico" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     
-                    <h3 class="text-lg font-semibold mt-6 mb-2">Equipamentos Usados</h3>
-                    <table id="tabelaEquipamentos" class="w-full text-sm text-left text-gray-500">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th>Descrição</th><th>Qtd</th><th>Unitário</th><th>Total</th><th>Ações</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                    <button onclick="adicionarItem('tabelaEquipamentos')" class="mb-8 px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">Adicionar Equipamento</button>
-
                     <div class="flex justify-end gap-4 mb-8">
                       <button onclick="limparFormulario('os')" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Limpar</button>
                       <button onclick="salvarRegistro('os')" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Salvar</button>
@@ -353,15 +346,7 @@
                 dados.cliente = document.getElementById("osCliente").value;
                 dados.servico = document.getElementById("osServico").value;
                 dados.tecnico = document.getElementById("osTecnico").value;
-                dados.equipamentos = [];
-                document.querySelectorAll("#tabelaEquipamentos tbody tr").forEach(tr => {
-                    dados.equipamentos.push({
-                        desc: tr.children[0].children[0].value,
-                        qtd: tr.children[1].children[0].value,
-                        unit: tr.children[2].children[0].value,
-                        total: tr.children[3].children[0].value
-                    });
-                });
+                // A parte de equipamentos foi removida
             }
 
             try {
@@ -407,7 +392,7 @@
             document.getElementById("osCliente").value = "";
             document.getElementById("osServico").value = "";
             document.getElementById("osTecnico").value = "";
-            document.querySelector("#tabelaEquipamentos tbody").innerHTML = "";
+            // A parte de equipamentos foi removida
           }
           alert("✔️ Formulário limpo!");
         }
@@ -542,7 +527,12 @@
                       body: dataRows,
                       startY: y,
                       theme: 'grid',
-                      styles: { cellPadding: 2, fontSize: 10 },
+                      styles: { 
+                          cellPadding: 2, 
+                          fontSize: 10,
+                          tableLineColor: [220, 220, 220],
+                          tableLineWidth: 0.1
+                      },
                       headStyles: { fillColor: [59, 130, 246], textColor: 255 },
                       columnStyles: {
                           0: { cellWidth: 100 },
@@ -557,6 +547,7 @@
                   doc.text(`Total: ${document.getElementById('total-orcamento').textContent}`, doc.internal.pageSize.getWidth() - 20, y, { align: "right" });
                   y += 20;
 
+                  doc.setDrawColor(220, 220, 220);
                   doc.line(60, y, 150, y);
                   y += 5;
                   doc.text("Assinatura do Cliente", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
@@ -596,39 +587,9 @@
                   doc.setFontSize(12);
                   const splitServico = doc.splitTextToSize(servico, 170);
                   doc.text(splitServico, 20, y);
-                  y += (splitServico.length * 5) + 5;
+                  y += (splitServico.length * 5) + 20;
                   
-                  doc.setFontSize(14);
-                  doc.text("Equipamentos Utilizados", 20, y);
-                  
-                  const headers = ["Descrição", "Qtd", "Valor Unit.", "Total"];
-                  const dataRows = [];
-                  document.querySelectorAll('#tabelaEquipamentos tbody tr').forEach(row => {
-                      const rowData = [
-                          row.children[0].children[0].value,
-                          row.children[1].children[0].value,
-                          row.children[2].children[0].value,
-                          row.children[3].children[0].value
-                      ];
-                      dataRows.push(rowData);
-                  });
-                  
-                  doc.autoTable({
-                      head: [headers],
-                      body: dataRows,
-                      startY: y + 5,
-                      theme: 'grid',
-                      styles: { cellPadding: 2, fontSize: 10 },
-                      headStyles: { fillColor: [59, 130, 246], textColor: 255 },
-                      columnStyles: {
-                          0: { cellWidth: 100 },
-                          1: { cellWidth: 20 },
-                          2: { cellWidth: 30 },
-                          3: { cellWidth: 40 }
-                      }
-                  });
-                  
-                  y = doc.autoTable.previous.finalY + 20;
+                  doc.setDrawColor(220, 220, 220);
                   doc.line(60, y, 150, y);
                   y += 5;
                   doc.text("Assinatura do Cliente", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
@@ -689,17 +650,6 @@
             document.getElementById("osCliente").value = d.cliente || "";
             document.getElementById("osServico").value = d.servico || "";
             document.getElementById("osTecnico").value = d.tecnico || "";
-            const tbody = document.querySelector("#tabelaEquipamentos tbody");
-            tbody.innerHTML = "";
-            (d.equipamentos || []).forEach(eq => {
-              const tr = document.createElement("tr");
-              tr.innerHTML = `<td><input value="${eq.desc}" class="w-full px-2 py-1 border rounded-md"></td>
-                <td><input type="number" value="${eq.qtd}" class="w-20 px-2 py-1 border rounded-md"></td>
-                <td><input type="number" value="${eq.unit}" class="w-20 px-2 py-1 border rounded-md"></td>
-                <td><input type="number" value="${eq.total}" readonly class="w-20 px-2 py-1 border rounded-md"></td>
-                <td><button onclick="this.closest('tr').remove()" class="text-red-600 hover:text-red-800 transition-colors">X</button></td>`;
-              tbody.appendChild(tr);
-            });
           }
         }
     </script>
