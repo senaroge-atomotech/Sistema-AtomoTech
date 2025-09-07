@@ -1,382 +1,707 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>ÁtomoTech — Sistema</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f4f6f8;
-    }
-    header {
-      background: #0b66ff;
-      color: white;
-      padding: 16px;
-      text-align: center;
-      font-size: 20px;
-      font-weight: bold;
-    }
-    main {
-      padding: 20px;
-    }
-    .menu {
-      text-align: center;
-      margin: 30px 0;
-    }
-    .menu button {
-      background: #4a90e2;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      margin: 10px;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .menu button:hover {
-      opacity: 0.9;
-    }
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      max-width: 800px;
-      margin: 0 auto;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    h2 {
-      margin-top: 0;
-      color: #0b66ff;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-    table, th, td {
-      border: 1px solid #ddd;
-    }
-    th, td {
-      padding: 8px;
-      text-align: left;
-    }
-    .actions {
-      margin-top: 20px;
-      text-align: right;
-    }
-    .actions button {
-      margin-left: 10px;
-      padding: 10px 18px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .btn-primary { background: #0b66ff; color: white; }
-    .btn-secondary { background: #777; color: white; }
-    .btn-danger { background: #d9534f; color: white; }
-  </style>
-</head>
-<body>
-  <header>ÁtomoTech — Sistema de Orçamentos & OS</header>
-  <main>
-    <div class="menu">
-      <button onclick="mostrarPagina('orcamento')">Novo Orçamento</button>
-      <button onclick="mostrarPagina('os')">Nova OS</button>
-      <button onclick="mostrarPagina('consultar')">Consultar Registros</button>
-    </div>
-
-    <!-- Orçamento -->
-    <section id="orcamento" style="display:none;">
-      <div class="card">
-        <h2>Orçamento</h2>
-        <input type="hidden" id="orcamentoId">
-        <label>Cliente</label>
-        <input type="text" id="orcCliente">
-        <label>Descrição</label>
-        <textarea id="orcDescricao"></textarea>
-        
-        <h3>Itens</h3>
-        <table id="tabelaOrcamento">
-          <thead>
-            <tr><th>Descrição</th><th>Qtd</th><th>Unitário</th><th>Total</th><th>Ações</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <button class="btn-secondary" onclick="adicionarItem('tabelaOrcamento')">Adicionar Item</button>
-
-        <div class="actions">
-          <button class="btn-danger" onclick="limparFormulario('orcamento')">Limpar</button>
-          <button class="btn-primary" onclick="salvarRegistro('orcamento')">Salvar</button>
-          <button class="btn-secondary" onclick="gerarPDF('orcamento')">Gerar PDF</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- OS -->
-    <section id="os" style="display:none;">
-      <div class="card">
-        <h2>Ordem de Serviço</h2>
-        <input type="hidden" id="osId">
-        <label>Cliente</label>
-        <input type="text" id="osCliente">
-        <label>Serviço</label>
-        <textarea id="osServico"></textarea>
-        <label>Técnico Responsável</label>
-        <input type="text" id="osTecnico">
-        
-        <h3>Equipamentos Usados</h3>
-        <table id="tabelaEquipamentos">
-          <thead>
-            <tr><th>Descrição</th><th>Qtd</th><th>Unitário</th><th>Total</th><th>Ações</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <button class="btn-secondary" onclick="adicionarItem('tabelaEquipamentos')">Adicionar Equipamento</button>
-
-        <div class="actions">
-          <button class="btn-danger" onclick="limparFormulario('os')">Limpar</button>
-          <button class="btn-primary" onclick="salvarRegistro('os')">Salvar</button>
-          <button class="btn-secondary" onclick="gerarPDF('os')">Gerar PDF</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Consultar -->
-    <section id="consultar" style="display:none;">
-      <div class="card">
-        <h2>Consulta de Registros</h2>
-        <label>Tipo</label>
-        <select id="consultaTipo">
-          <option value="orcamento">Orçamento</option>
-          <option value="os">Ordem de Serviço</option>
-        </select>
-        <label>Cliente</label>
-        <input type="text" id="consultaCliente">
-        <div class="actions">
-          <button class="btn-primary" onclick="consultarRegistros()">Consultar</button>
-        </div>
-        <table id="tabelaConsulta">
-          <thead><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Ações</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-  <script>
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyBUF-WA58TIK259hYy7HECYLRbhOyqR1pE",
-      authDomain: "atomotech-sistema.firebaseapp.com",
-      projectId: "atomotech-sistema",
-      storageBucket: "atomotech-sistema.firebasestorage.app",
-      messagingSenderId: "106133482163",
-      appId: "1:106133482163:web:0fdcd843ae3e778fe15ec6",
-      measurementId: "G-34WWR2929E"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    // Mostrar seções
-    function mostrarPagina(id) {
-      document.querySelectorAll("section").forEach(sec => sec.style.display = "none");
-      document.getElementById(id).style.display = "block";
-    }
-
-    // Gerar número DDMMYY-XXX
-    function gerarNumero() {
-      const hoje = new Date();
-      const dia = String(hoje.getDate()).padStart(2, "0");
-      const mes = String(hoje.getMonth() + 1).padStart(2, "0");
-      const ano = String(hoje.getFullYear()).slice(-2);
-      const seq = String(Math.floor(Math.random() * 1000)).padStart(3, "0");
-      return `${dia}${mes}${ano}-${seq}`;
-    }
-
-    // Adicionar item em tabela
-    function adicionarItem(tabelaId) {
-      const tbody = document.getElementById(tabelaId).querySelector("tbody");
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><input></td>
-        <td><input type="number" value="1"></td>
-        <td><input type="number" value="0"></td>
-        <td><input type="number" value="0" readonly></td>
-        <td><button onclick="this.closest('tr').remove()">X</button></td>
-      `;
-      tbody.appendChild(tr);
-
-      tr.querySelectorAll("input").forEach(inp => {
-        inp.addEventListener("input", () => {
-          const qtd = tr.children[1].children[0].value;
-          const unit = tr.children[2].children[0].value;
-          tr.children[3].children[0].value = (qtd * unit).toFixed(2);
-        });
-      });
-    }
-
-    // Limpar formulário
-    function limparFormulario(tipo) {
-      document.getElementById(tipo + "Id").value = "";
-      if (tipo === "orcamento") {
-        document.getElementById("orcCliente").value = "";
-        document.getElementById("orcDescricao").value = "";
-        document.querySelector("#tabelaOrcamento tbody").innerHTML = "";
-      } else {
-        document.getElementById("osCliente").value = "";
-        document.getElementById("osServico").value = "";
-        document.getElementById("osTecnico").value = "";
-        document.querySelector("#tabelaEquipamentos tbody").innerHTML = "";
-      }
-      alert("✔️ Formulário limpo!");
-    }
-
-    // Salvar no Firestore
-    async function salvarRegistro(tipo) {
-      let id = document.getElementById(tipo + "Id").value;
-      const numero = id ? null : gerarNumero();
-      let dados = { data: new Date().toISOString() };
-
-      if (tipo === "orcamento") {
-        dados.cliente = document.getElementById("orcCliente").value;
-        dados.descricao = document.getElementById("orcDescricao").value;
-        dados.itens = [];
-        document.querySelectorAll("#tabelaOrcamento tbody tr").forEach(tr => {
-          dados.itens.push({
-            desc: tr.children[0].children[0].value,
-            qtd: tr.children[1].children[0].value,
-            unit: tr.children[2].children[0].value,
-            total: tr.children[3].children[0].value
-          });
-        });
-      } else {
-        dados.cliente = document.getElementById("osCliente").value;
-        dados.servico = document.getElementById("osServico").value;
-        dados.tecnico = document.getElementById("osTecnico").value;
-        dados.equipamentos = [];
-        document.querySelectorAll("#tabelaEquipamentos tbody tr").forEach(tr => {
-          dados.equipamentos.push({
-            desc: tr.children[0].children[0].value,
-            qtd: tr.children[1].children[0].value,
-            unit: tr.children[2].children[0].value,
-            total: tr.children[3].children[0].value
-          });
-        });
-      }
-
-      try {
-        if (id) {
-          await db.collection(tipo).doc(id).update(dados);
-          alert("✏️ Registro atualizado!");
-        } else {
-          dados.numero = numero;
-          const ref = await db.collection(tipo).add(dados);
-          document.getElementById(tipo + "Id").value = ref.id;
-          alert("✅ Registro salvo!");
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomoTech - Gestão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/js/all.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
         }
-        limparFormulario(tipo);
-      } catch (err) {
-        console.error(err);
-        alert("⚠️ Erro ao salvar!");
-      }
-    }
+        .header {
+            background-color: #0d47a1;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <header class="header text-white p-4 shadow-lg fixed top-0 left-0 right-0 z-50">
+        <div class="container mx-auto flex items-center justify-between">
+            <div class="flex items-center">
+                <img src="logo.png" alt="AtomoTech Logo" class="h-8 mr-2">
+                <h1 class="text-3xl font-bold">AtomoTech1982</h1>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <span id="user-status" class="text-sm font-medium">Conectando...</span>
+                <a href="teste_BD.html" class="bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-medium py-1 px-2 rounded-full transition-colors duration-200">
+                    Testar Conexão
+                </a>
+            </div>
+        </div>
+    </header>
 
-    // Gerar PDF
-    async function gerarPDF(tipo) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const numero = gerarNumero();
+    <main class="flex-1 mt-20 p-4 sm:p-6 lg:p-8">
+        <div class="container mx-auto">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800">Painel de Gestão</h2>
+            
+            <div id="main-menu" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
+                    <i class="fa-solid fa-file-invoice-dollar text-4xl text-green-600 mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Novo Orçamento</h3>
+                    <p class="text-gray-600 mb-4">Crie e envie orçamentos profissionais para seus clientes.</p>
+                    <button onclick="mostrarPagina('orcamento')" class="px-6 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition-colors">
+                        Criar Orçamento
+                    </button>
+                </div>
 
-      // Marca d’água
-      const img = new Image();
-      img.src = "logo.png";
-      img.onload = function() {
-        doc.addImage(img, "PNG", 80, 80, 50, 50, "", "FAST");
-        doc.setTextColor(40, 40, 40);
-        doc.setFontSize(16);
-        doc.text("ÁtomoTech - " + (tipo === "orcamento" ? "Orçamento" : "Ordem de Serviço"), 20, 20);
-        doc.text("Número: " + numero, 20, 30);
-        doc.save(`${tipo}-${numero}.pdf`);
-      };
-    }
+                <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
+                    <i class="fa-solid fa-tools text-4xl text-blue-600 mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Nova Ordem de Serviço</h3>
+                    <p class="text-gray-600 mb-4">Gerencie serviços e colete assinaturas digitais.</p>
+                    <button onclick="mostrarPagina('os')" class="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors">
+                        Criar Ordem de Serviço
+                    </button>
+                </div>
 
-    // Consultar registros
-    async function consultarRegistros() {
-      const tipo = document.getElementById("consultaTipo").value;
-      const cliente = document.getElementById("consultaCliente").value;
-      let query = db.collection(tipo);
-      if (cliente) query = query.where("cliente", "==", cliente);
-      const snap = await query.get();
-      const tbody = document.querySelector("#tabelaConsulta tbody");
-      tbody.innerHTML = "";
-      snap.forEach(docSnap => {
-        const d = docSnap.data();
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${d.numero || ""}</td><td>${d.cliente || ""}</td><td>${d.data.split("T")[0]}</td>
-          <td><button onclick="editarRegistro('${tipo}','${docSnap.id}')">Editar</button></td>`;
-        tbody.appendChild(tr);
-      });
-    }
+                <div class="bg-white p-6 rounded-lg shadow-md flex flex-col items-center text-center">
+                    <i class="fa-solid fa-list-check text-4xl text-yellow-600 mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Gerenciar Documentos</h3>
+                    <p class="text-gray-600 mb-4">Visualize e edite todas as suas ordens de serviço e orçamentos.</p>
+                    <button onclick="mostrarPagina('consultar')" class="px-6 py-2 bg-yellow-600 text-white rounded-lg shadow hover:bg-yellow-700 transition-colors">
+                        Gerenciar
+                    </button>
+                </div>
+            </div>
 
-    // Editar registro
-    async function editarRegistro(tipo, id) {
-      const docSnap = await db.collection(tipo).doc(id).get();
-      if (!docSnap.exists) return;
-      const d = docSnap.data();
-      document.getElementById(tipo + "Id").value = id;
+            <section id="orcamento" class="hidden">
+                <div class="max-w-4xl mx-auto bg-white shadow-xl rounded-lg p-8">
+                    <div class="relative flex justify-between items-center mb-6">
+                        <span id="voltar-btn-orc" onclick="voltarAoMenu()" class="absolute left-0 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors cursor-pointer">Voltar</span>
+                        <div class="flex-grow text-center">
+                            <h1 class="text-3xl font-bold text-gray-800 inline-block">Orçamento</h1>
+                        </div>
+                        <img src="logo.png" alt="Logo da AtomoTech" class="w-28 rounded-md ml-auto" onerror="this.onerror=null;this.src='https://placehold.co/150x50/e2e8f0/334155?text=AtomoTech';">
+                    </div>
 
-      if (tipo === "orcamento") {
-        mostrarPagina("orcamento");
-        document.getElementById("orcCliente").value = d.cliente || "";
-        document.getElementById("orcDescricao").value = d.descricao || "";
-        const tbody = document.querySelector("#tabelaOrcamento tbody");
-        tbody.innerHTML = "";
-        (d.itens || []).forEach(item => {
+                    <input type="hidden" id="orcamentoId">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-sm">
+                        <div>
+                            <p class="font-bold text-gray-700">Orçamento:</p>
+                            <p id="orcamento-numero" class="text-gray-900 font-mono"></p>
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-700">Data:</p>
+                            <p id="data-atual" class="text-gray-900"></p>
+                        </div>
+                        <div>
+                            <div>
+                                <p class="font-bold text-gray-700">Validade:</p>
+                                <input id="validade-input" type="text" value="30 dias" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-700">Condições de Pagamento:</p>
+                            <input id="condicoes-pagamento-input" type="text" value="Avista" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-700">Status:</p>
+                            <select id="status-select" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <option value="Pendente">Pendente</option>
+                                <option value="Aprovado">Aprovado</option>
+                                <option value="Rejeitado">Rejeitado</option>
+                                <option value="Cancelado">Cancelado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-8 p-6 bg-gray-50 rounded-lg">
+                        <h2 class="text-lg font-semibold text-gray-700 mb-4">Informações do Cliente</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input id="cliente-nome" type="text" placeholder="Nome" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                            <input id="cliente-email" type="email" placeholder="Email" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                            <input id="cliente-telefone" type="tel" placeholder="Telefone" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto mb-4">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3">Descrição</th>
+                                    <th scope="col" class="px-6 py-3">Qtd</th>
+                                    <th scope="col" class="px-6 py-3">Valor Unit.</th>
+                                    <th scope="col" class="px-6 py-3">Total</th>
+                                    <th scope="col" class="px-6 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itens-tabela">
+                                </tbody>
+                            <tfoot>
+                                <tr class="font-semibold text-gray-900">
+                                    <td colspan="3" class="px-6 py-3 text-right">Total:</td>
+                                    <td id="total-orcamento" class="px-6 py-3 text-right">R$ 0,00</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <button id="add-item-btn-orcamento" onclick="adicionarItem('itens-tabela')" class="mb-8 px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">Adicionar Item</button>
+                    
+                    <div class="flex justify-end gap-4 mb-8">
+                        <button id="limpar-orcamento-btn" onclick="limparFormulario('orcamento')" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Limpar</button>
+                        <button id="salvar-orcamento-btn" onclick="salvarRegistro('orcamento')" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Salvar</button>
+                        <button id="gerar-pdf-orcamento-btn" onclick="gerarPDF('orcamento')" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">Gerar PDF</button>
+                    </div>
+
+                    <div class="border-t pt-6 text-sm text-center text-gray-600">
+                        <p>Assinatura do Cliente</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="os" class="hidden">
+                <div class="max-w-4xl mx-auto bg-white shadow-xl rounded-lg p-8">
+                    <div class="relative flex justify-between items-center mb-6">
+                        <span id="voltar-btn-os" onclick="voltarAoMenu()" class="absolute left-0 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors cursor-pointer">Voltar</span>
+                        <div class="flex-grow text-center">
+                            <h1 class="text-3xl font-bold text-gray-800 inline-block">Ordem de Serviço</h1>
+                        </div>
+                        <img src="logo.png" alt="Logo da AtomoTech" class="w-28 rounded-md ml-auto" onerror="this.onerror=null;this.src='https://placehold.co/150x50/e2e8f0/334155?text=AtomoTech';">
+                    </div>
+                    <input type="hidden" id="osId">
+                    <label class="block mt-4 font-bold">Cliente</label>
+                    <input type="text" id="osCliente" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="block mt-4 font-bold">Serviço</label>
+                    <textarea id="osServico" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    <label class="block mt-4 font-bold">Técnico Responsável</label>
+                    <input type="text" id="osTecnico" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    
+                    <h3 class="text-lg font-semibold mt-6 mb-2">Equipamentos Usados</h3>
+                    <table id="tabelaEquipamentos" class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th>Descrição</th><th>Qtd</th><th>Unitário</th><th>Total</th><th>Ações</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                    <button onclick="adicionarItem('tabelaEquipamentos')" class="mb-8 px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">Adicionar Equipamento</button>
+
+                    <div class="flex justify-end gap-4 mb-8">
+                      <button onclick="limparFormulario('os')" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Limpar</button>
+                      <button onclick="salvarRegistro('os')" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Salvar</button>
+                      <button onclick="gerarPDF('os')" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">Gerar PDF</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="consultar" class="hidden">
+                <div class="max-w-4xl mx-auto bg-white shadow-xl rounded-lg p-8">
+                    <div class="relative flex justify-between items-center mb-6">
+                        <span id="voltar-btn-consultar" onclick="voltarAoMenu()" class="absolute left-0 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors cursor-pointer">Voltar</span>
+                        <div class="flex-grow text-center">
+                            <h1 class="text-3xl font-bold text-gray-800 inline-block">Consulta de Registros</h1>
+                        </div>
+                        <img src="logo.png" alt="Logo da AtomoTech" class="w-28 rounded-md ml-auto" onerror="this.onerror=null;this.src='https://placehold.co/150x50/e2e8f0/334155?text=AtomoTech';">
+                    </div>
+                    <label class="block mt-4 font-bold">Tipo</label>
+                    <select id="consultaTipo" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="orcamento">Orçamento</option>
+                      <option value="os">Ordem de Serviço</option>
+                    </select>
+                    <label class="block mt-4 font-bold">Cliente</label>
+                    <input type="text" id="consultaCliente" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="flex justify-end gap-4 mb-8">
+                        <button onclick="consultarRegistros()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Consultar</button>
+                    </div>
+                    <table id="tabelaConsulta" class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th>Número</th><th>Cliente</th><th>Data</th><th>Ações</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+    </main>
+    
+    <script>
+        // Firebase config do index (1).html
+        const firebaseConfig = {
+          apiKey: "AIzaSyBUF-WA58TIK259hYy7HECYLRbhOyqR1pE",
+          authDomain: "atomotech-sistema.firebaseapp.com",
+          projectId: "atomotech-sistema",
+          storageBucket: "atomotech-sistema.firebasestorage.app",
+          messagingSenderId: "106133482163",
+          appId: "1:106133482163:web:0fdcd843ae3e778fe15ec6",
+          measurementId: "G-34WWR2929E"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Mostrar seções
+        function mostrarPagina(id) {
+          document.getElementById("main-menu").classList.add("hidden");
+          document.querySelectorAll("section").forEach(sec => sec.classList.add("hidden"));
+          document.getElementById(id).classList.remove("hidden");
+          if(id === 'orcamento') {
+             inicializarOrcamento();
+          }
+        }
+
+        // Voltar ao menu principal
+        function voltarAoMenu() {
+            document.querySelectorAll("section").forEach(sec => sec.classList.add("hidden"));
+            document.getElementById("main-menu").classList.remove("hidden");
+        }
+
+        // Funções para o formulário de Orçamento
+        function inicializarOrcamento() {
+            const data = new Date();
+            const dia = String(data.getDate()).padStart(2, '0');
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const ano = data.getFullYear().toString().substring(2);
+            document.getElementById('data-atual').textContent = `${dia}/${mes}/${data.getFullYear()}`;
+            
+            const numeroAleatorio = Math.floor(100 + Math.random() * 900);
+            document.getElementById('orcamento-numero').textContent = `${dia}${mes}${ano}-${numeroAleatorio}`;
+            
+            const clienteNomeInput = document.getElementById('cliente-nome');
+            const clienteEmailInput = document.getElementById('cliente-email');
+            const clienteTelefoneInput = document.getElementById('cliente-telefone');
+            
+            clienteNomeInput.addEventListener('input', () => {
+                const nome = clienteNomeInput.value.trim();
+                if (nome.length > 2) {
+                    clienteEmailInput.value = `${nome.toLowerCase().replace(/ /g, '')}@exemplo.com`;
+                    clienteTelefoneInput.value = `(99) 99999-9999`;
+                }
+            });
+            
+            adicionarItem('itens-tabela');
+        }
+
+        function adicionarItem(tabelaId, desc = '', qtd = 1, unit = 0) {
+          const tbody = document.getElementById(tabelaId);
           const tr = document.createElement("tr");
-          tr.innerHTML = `<td><input value="${item.desc}"></td>
-            <td><input type="number" value="${item.qtd}"></td>
-            <td><input type="number" value="${item.unit}"></td>
-            <td><input type="number" value="${item.total}" readonly></td>
-            <td><button onclick="this.closest('tr').remove()">X</button></td>`;
+          tr.classList.add('bg-white', 'border-b', 'hover:bg-gray-50');
+          tr.innerHTML = `
+            <td class="px-6 py-4"><input type="text" value="${desc}" class="descricao w-full px-2 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"></td>
+            <td class="px-6 py-4"><input type="number" value="${qtd}" class="qtd w-20 px-2 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 text-right"></td>
+            <td class="px-6 py-4"><input type="number" value="${unit}" class="valor-unit w-24 px-2 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 text-right"></td>
+            <td class="px-6 py-4 text-right item-total">R$ 0,00</td>
+            <td class="px-6 py-4 text-right"><button onclick="this.closest('tr').remove(); atualizarTotal()" class="remover-item-btn text-red-600 hover:text-red-800 transition-colors">Remover</button></td>
+          `;
           tbody.appendChild(tr);
-        });
-      } else {
-        mostrarPagina("os");
-        document.getElementById("osCliente").value = d.cliente || "";
-        document.getElementById("osServico").value = d.servico || "";
-        document.getElementById("osTecnico").value = d.tecnico || "";
-        const tbody = document.querySelector("#tabelaEquipamentos tbody");
-        tbody.innerHTML = "";
-        (d.equipamentos || []).forEach(eq => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `<td><input value="${eq.desc}"></td>
-            <td><input type="number" value="${eq.qtd}"></td>
-            <td><input type="number" value="${eq.unit}"></td>
-            <td><input type="number" value="${eq.total}" readonly></td>
-            <td><button onclick="this.closest('tr').remove()">X</button></td>`;
-          tbody.appendChild(tr);
-        });
-      }
-    }
-  </script>
+
+          const qtdInput = tr.querySelector('.qtd');
+          const unitInput = tr.querySelector('.valor-unit');
+          const totalCell = tr.querySelector('.item-total');
+
+          const updateTotals = () => {
+              const qtd = parseFloat(qtdInput.value) || 0;
+              const unit = parseFloat(unitInput.value) || 0;
+              totalCell.textContent = (qtd * unit).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+              atualizarTotal();
+          };
+
+          qtdInput.addEventListener('input', updateTotals);
+          unitInput.addEventListener('input', updateTotals);
+
+          if (desc && qtd && unit) {
+              updateTotals();
+          } else {
+              totalCell.textContent = 'R$ 0,00';
+          }
+          atualizarTotal();
+        }
+
+        function atualizarTotal() {
+            let total = 0;
+            document.querySelectorAll('#itens-tabela tr').forEach(row => {
+                const subtotalText = row.querySelector('.item-total').textContent.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+                total += parseFloat(subtotalText);
+            });
+            document.getElementById('total-orcamento').textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        // Salvar no Firestore (Orçamento e OS)
+        async function salvarRegistro(tipo) {
+            let dados = { data: new Date().toISOString() };
+            let id = document.getElementById(tipo + "Id").value;
+            const numero = id ? null : gerarNumero();
+            
+            if (tipo === "orcamento") {
+                dados.numero = document.getElementById('orcamento-numero').textContent;
+                dados.cliente = {
+                    nome: document.getElementById("cliente-nome").value,
+                    email: document.getElementById("cliente-email").value,
+                    telefone: document.getElementById("cliente-telefone").value,
+                };
+                dados.orcamentoInfo = {
+                    validade: document.getElementById('validade-input').value,
+                    condicoesPagamento: document.getElementById('condicoes-pagamento-input').value,
+                    status: document.getElementById('status-select').value,
+                };
+                dados.itens = [];
+                document.querySelectorAll("#itens-tabela tr").forEach(tr => {
+                    dados.itens.push({
+                        desc: tr.querySelector('.descricao').value,
+                        qtd: parseFloat(tr.querySelector('.qtd').value),
+                        unit: parseFloat(tr.querySelector('.valor-unit').value),
+                        total: tr.querySelector('.item-total').textContent
+                    });
+                });
+                dados.total = document.getElementById('total-orcamento').textContent;
+            } else {
+                dados.cliente = document.getElementById("osCliente").value;
+                dados.servico = document.getElementById("osServico").value;
+                dados.tecnico = document.getElementById("osTecnico").value;
+                dados.equipamentos = [];
+                document.querySelectorAll("#tabelaEquipamentos tbody tr").forEach(tr => {
+                    dados.equipamentos.push({
+                        desc: tr.children[0].children[0].value,
+                        qtd: tr.children[1].children[0].value,
+                        unit: tr.children[2].children[0].value,
+                        total: tr.children[3].children[0].value
+                    });
+                });
+            }
+
+            try {
+                if (id) {
+                    await db.collection(tipo).doc(id).update(dados);
+                    alert("✏️ Registro atualizado!");
+                } else {
+                    const ref = await db.collection(tipo).add(dados);
+                    document.getElementById(tipo + "Id").value = ref.id;
+                    alert("✅ Registro salvo!");
+                }
+                limparFormulario(tipo);
+            } catch (err) {
+                console.error(err);
+                alert("⚠️ Erro ao salvar!");
+            }
+        }
+
+        // Gerar número DDMMYY-XXX
+        function gerarNumero() {
+          const hoje = new Date();
+          const dia = String(hoje.getDate()).padStart(2, "0");
+          const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+          const ano = String(hoje.getFullYear()).slice(-2);
+          const seq = String(Math.floor(Math.random() * 1000)).padStart(3, "0");
+          return `${dia}${mes}${ano}-${seq}`;
+        }
+
+        // Limpar formulário
+        function limparFormulario(tipo) {
+          document.getElementById(tipo + "Id").value = "";
+          if (tipo === "orcamento") {
+            document.getElementById("cliente-nome").value = "";
+            document.getElementById("cliente-email").value = "";
+            document.getElementById("cliente-telefone").value = "";
+            document.getElementById('validade-input').value = '30 dias';
+            document.getElementById('condicoes-pagamento-input').value = 'Avista';
+            document.getElementById('status-select').value = 'Pendente';
+            document.getElementById("itens-tabela").innerHTML = "";
+            document.getElementById("total-orcamento").textContent = 'R$ 0,00';
+            inicializarOrcamento();
+          } else {
+            document.getElementById("osCliente").value = "";
+            document.getElementById("osServico").value = "";
+            document.getElementById("osTecnico").value = "";
+            document.querySelector("#tabelaEquipamentos tbody").innerHTML = "";
+          }
+          alert("✔️ Formulário limpo!");
+        }
+
+        // Gerar PDF com o novo design, status e marca d'água
+        async function gerarPDF(tipo) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const addWatermark = (doc, imgData) => {
+                const imgWidth = 150;
+                const imgHeight = 150;
+                const x = (doc.internal.pageSize.getWidth() - imgWidth) / 2;
+                const y = (doc.internal.pageSize.getHeight() - imgHeight) / 2;
+                doc.setGState(new doc.GState({ opacity: 0.1 }));
+                doc.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+                doc.setGState(new doc.GState({ opacity: 1.0 }));
+            };
+            
+            const addHeader = (doc, title) => {
+                const blueColor = [13, 71, 161];
+                doc.setFillColor(...blueColor);
+                doc.rect(0, 0, doc.internal.pageSize.getWidth(), 30, 'F');
+                doc.setFontSize(24);
+                doc.setTextColor(255, 255, 255);
+                doc.text(title, doc.internal.pageSize.getWidth() / 2, 20, { align: "center" });
+                doc.setFontSize(14);
+                doc.text("AtomoTech", doc.internal.pageSize.getWidth() / 2, 30, { align: "center" });
+                doc.setTextColor(0, 0, 0);
+            };
+
+            const img = new Image();
+            img.src = "logo.png";
+            
+            img.onload = () => {
+              if (tipo === 'orcamento') {
+                  addHeader(doc, "Orçamento");
+                  addWatermark(doc, img);
+                  
+                  const orcamentoNumeroSpan = document.getElementById('orcamento-numero');
+                  const dataAtualSpan = document.getElementById('data-atual');
+                  const validadeInput = document.getElementById('validade-input');
+                  const condicoesPagamentoInput = document.getElementById('condicoes-pagamento-input');
+                  const statusSelect = document.getElementById('status-select');
+                  
+                  const clienteNome = document.getElementById('cliente-nome').value;
+                  const clienteEmail = document.getElementById('cliente-email').value;
+                  const clienteTelefone = document.getElementById('cliente-telefone').value;
+
+                  let y = 45;
+                  const status = statusSelect.value;
+                  let statusColor = [0, 0, 0];
+                  const statusX = doc.internal.pageSize.getWidth() - 50;
+                  const statusY = 10;
+                  const statusWidth = 40;
+                  const statusHeight = 10;
+      
+                  doc.setFontSize(10);
+                  doc.setTextColor(255, 255, 255);
+                  doc.setFont(undefined, 'bold');
+                  
+                  switch(status) {
+                      case "Pendente":
+                          statusColor = [255, 193, 7]; // Amarelo
+                          doc.setFillColor(...statusColor);
+                          doc.roundedRect(statusX, statusY, statusWidth, statusHeight, 2, 2, 'F');
+                          doc.text(status.toUpperCase(), statusX + statusWidth / 2, statusY + statusHeight / 2 + 1, { align: 'center' });
+                          break;
+                      case "Aprovado":
+                          statusColor = [40, 167, 69]; // Verde
+                          doc.setFillColor(...statusColor);
+                          doc.roundedRect(statusX, statusY, statusWidth, statusHeight, 2, 2, 'F');
+                          doc.text(status.toUpperCase(), statusX + statusWidth / 2, statusY + statusHeight / 2 + 1, { align: 'center' });
+                          break;
+                      case "Rejeitado":
+                          statusColor = [220, 53, 69]; // Vermelho
+                          doc.setFillColor(...statusColor);
+                          doc.roundedRect(statusX, statusY, statusWidth, statusHeight, 2, 2, 'F');
+                          doc.text(status.toUpperCase(), statusX + statusWidth / 2, statusY + statusHeight / 2 + 1, { align: 'center' });
+                          break;
+                      case "Cancelado":
+                          statusColor = [220, 53, 69]; // Vermelho
+                          doc.setFillColor(...statusColor);
+                          doc.roundedRect(statusX, statusY, statusWidth, statusHeight, 2, 2, 'F');
+                          doc.text(status.toUpperCase(), statusX + statusWidth / 2, statusY + statusHeight / 2 + 1, { align: 'center' });
+                          
+                          doc.setDrawColor(255, 193, 7); // Amarelo para a cruz
+                          doc.setLineWidth(1);
+                          doc.line(statusX, statusY + statusHeight, statusX + statusWidth, statusY);
+                          doc.line(statusX, statusY, statusX + statusWidth, statusY + statusHeight);
+                          break;
+                  }
+                  
+                  doc.setTextColor(0, 0, 0);
+                  doc.setFont(undefined, 'normal');
+
+                  doc.setFontSize(12);
+                  doc.text(`Orçamento: ${orcamentoNumeroSpan.textContent}`, 20, y);
+                  doc.text(`Data: ${dataAtualSpan.textContent}`, 105, y);
+                  y += 7;
+                  doc.text(`Validade: ${validadeInput.value}`, 20, y);
+                  doc.text(`Condições de Pagamento: ${condicoesPagamentoInput.value}`, 105, y);
+                  y += 7;
+                  doc.text(`Status: ${statusSelect.value}`, 20, y);
+                  y += 10;
+                  
+                  doc.setFontSize(14);
+                  doc.text("Informações do Cliente", 20, y);
+                  y += 7;
+                  doc.setFontSize(12);
+                  doc.text(`Nome: ${clienteNome}`, 20, y);
+                  doc.text(`Email: ${clienteEmail}`, 105, y);
+                  y += 7;
+                  doc.text(`Telefone: ${clienteTelefone}`, 20, y);
+                  y += 10;
+
+
+                  const headers = ["Descrição", "Qtd", "Valor Unit.", "Total"];
+                  const dataRows = [];
+                  document.querySelectorAll('#itens-tabela tr').forEach(row => {
+                      const rowData = [
+                          row.querySelector('.descricao').value,
+                          row.querySelector('.qtd').value,
+                          row.querySelector('.valor-unit').value,
+                          row.querySelector('.item-total').textContent
+                      ];
+                      dataRows.push(rowData);
+                  });
+                  
+                  doc.autoTable({
+                      head: [headers],
+                      body: dataRows,
+                      startY: y,
+                      theme: 'grid',
+                      styles: { cellPadding: 2, fontSize: 10 },
+                      headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+                      columnStyles: {
+                          0: { cellWidth: 100 },
+                          1: { cellWidth: 20 },
+                          2: { cellWidth: 30 },
+                          3: { cellWidth: 40 }
+                      }
+                  });
+
+                  y = doc.autoTable.previous.finalY + 5;
+                  doc.setFontSize(12);
+                  doc.text(`Total: ${document.getElementById('total-orcamento').textContent}`, doc.internal.pageSize.getWidth() - 20, y, { align: "right" });
+                  y += 20;
+
+                  doc.line(60, y, 150, y);
+                  y += 5;
+                  doc.text("Assinatura do Cliente", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
+
+                  const orcamentoNumeroPDF = orcamentoNumeroSpan.textContent.replace(/ /g, '_').replace('#', '');
+                  doc.save(`orcamento-${orcamentoNumeroPDF}.pdf`);
+
+              } else {
+                  // PDF para OS
+                  addHeader(doc, "Ordem de Serviço");
+                  addWatermark(doc, img);
+                  
+                  const cliente = document.getElementById('osCliente').value;
+                  const servico = document.getElementById('osServico').value;
+                  const tecnico = document.getElementById('osTecnico').value;
+                  const numero = gerarNumero();
+                  let y = 45;
+                  
+                  doc.setFontSize(12);
+                  doc.text(`Número da OS: ${numero}`, 20, y);
+                  y += 7;
+                  doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, y);
+                  y += 10;
+                  
+                  doc.setFontSize(14);
+                  doc.text("Informações da Ordem de Serviço", 20, y);
+                  y += 7;
+                  doc.setFontSize(12);
+                  doc.text(`Cliente: ${cliente}`, 20, y);
+                  y += 7;
+                  doc.text(`Técnico Responsável: ${tecnico}`, 20, y);
+                  y += 10;
+
+                  doc.setFontSize(14);
+                  doc.text("Serviço Executado", 20, y);
+                  y += 7;
+                  doc.setFontSize(12);
+                  const splitServico = doc.splitTextToSize(servico, 170);
+                  doc.text(splitServico, 20, y);
+                  y += (splitServico.length * 5) + 5;
+                  
+                  doc.setFontSize(14);
+                  doc.text("Equipamentos Utilizados", 20, y);
+                  
+                  const headers = ["Descrição", "Qtd", "Valor Unit.", "Total"];
+                  const dataRows = [];
+                  document.querySelectorAll('#tabelaEquipamentos tbody tr').forEach(row => {
+                      const rowData = [
+                          row.children[0].children[0].value,
+                          row.children[1].children[0].value,
+                          row.children[2].children[0].value,
+                          row.children[3].children[0].value
+                      ];
+                      dataRows.push(rowData);
+                  });
+                  
+                  doc.autoTable({
+                      head: [headers],
+                      body: dataRows,
+                      startY: y + 5,
+                      theme: 'grid',
+                      styles: { cellPadding: 2, fontSize: 10 },
+                      headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+                      columnStyles: {
+                          0: { cellWidth: 100 },
+                          1: { cellWidth: 20 },
+                          2: { cellWidth: 30 },
+                          3: { cellWidth: 40 }
+                      }
+                  });
+                  
+                  y = doc.autoTable.previous.finalY + 20;
+                  doc.line(60, y, 150, y);
+                  y += 5;
+                  doc.text("Assinatura do Cliente", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
+
+                  doc.save(`os-${numero}.pdf`);
+              }
+            };
+
+            img.onerror = () => {
+                alert("Erro ao carregar a imagem 'logo.png'. Verifique se o arquivo existe e o caminho está correto.");
+            };
+        }
+
+        // Consultar registros
+        async function consultarRegistros() {
+          const tipo = document.getElementById("consultaTipo").value;
+          const cliente = document.getElementById("consultaCliente").value;
+          let query = db.collection(tipo);
+          if (cliente) query = query.where("cliente", "==", cliente);
+          const snap = await query.get();
+          const tbody = document.querySelector("#tabelaConsulta tbody");
+          tbody.innerHTML = "";
+          snap.forEach(docSnap => {
+            const d = docSnap.data();
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${d.numero || ""}</td><td>${d.cliente.nome || ""}</td><td>${d.data.split("T")[0]}</td>
+              <td><button onclick="editarRegistro('${tipo}','${docSnap.id}')" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">Editar</button></td>`;
+            tbody.appendChild(tr);
+          });
+        }
+
+        // Editar registro
+        async function editarRegistro(tipo, id) {
+          const docSnap = await db.collection(tipo).doc(id).get();
+          if (!docSnap.exists) return;
+          const d = docSnap.data();
+          document.getElementById(tipo + "Id").value = id;
+
+          if (tipo === "orcamento") {
+            mostrarPagina("orcamento");
+            document.getElementById("orcamento-numero").textContent = d.numero || "";
+            document.getElementById("data-atual").textContent = d.data ? d.data.split("T")[0] : "";
+            document.getElementById("cliente-nome").value = d.cliente.nome || "";
+            document.getElementById("cliente-email").value = d.cliente.email || "";
+            document.getElementById("cliente-telefone").value = d.cliente.telefone || "";
+            document.getElementById('validade-input').value = d.orcamentoInfo.validade || '30 dias';
+            document.getElementById('condicoes-pagamento-input').value = d.orcamentoInfo.condicoesPagamento || 'Avista';
+            document.getElementById('status-select').value = d.orcamentoInfo.status || 'Pendente';
+            
+            const tbody = document.getElementById("itens-tabela");
+            tbody.innerHTML = "";
+            (d.itens || []).forEach(item => {
+                adicionarItem('itens-tabela', item.desc, item.qtd, item.unit);
+            });
+            atualizarTotal();
+          } else {
+            mostrarPagina("os");
+            document.getElementById("osCliente").value = d.cliente || "";
+            document.getElementById("osServico").value = d.servico || "";
+            document.getElementById("osTecnico").value = d.tecnico || "";
+            const tbody = document.querySelector("#tabelaEquipamentos tbody");
+            tbody.innerHTML = "";
+            (d.equipamentos || []).forEach(eq => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `<td><input value="${eq.desc}" class="w-full px-2 py-1 border rounded-md"></td>
+                <td><input type="number" value="${eq.qtd}" class="w-20 px-2 py-1 border rounded-md"></td>
+                <td><input type="number" value="${eq.unit}" class="w-20 px-2 py-1 border rounded-md"></td>
+                <td><input type="number" value="${eq.total}" readonly class="w-20 px-2 py-1 border rounded-md"></td>
+                <td><button onclick="this.closest('tr').remove()" class="text-red-600 hover:text-red-800 transition-colors">X</button></td>`;
+              tbody.appendChild(tr);
+            });
+          }
+        }
+    </script>
 </body>
 </html>
