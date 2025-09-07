@@ -13,6 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -20,6 +21,11 @@
         }
         .header {
             background-color: #0d47a1;
+        }
+        .signature-pad {
+            border: 1px solid #d1d5db;
+            background-color: #f9fafb;
+            border-radius: 0.5rem;
         }
     </style>
 </head>
@@ -170,13 +176,28 @@
                         <img src="logo.png" alt="Logo da AtomoTech" class="w-28 rounded-md ml-auto" onerror="this.onerror=null;this.src='https://placehold.co/150x50/e2e8f0/334155?text=AtomoTech';">
                     </div>
                     <input type="hidden" id="osId">
+
                     <label class="block mt-4 font-bold">Cliente</label>
                     <input type="text" id="osCliente" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    
+                    <label class="block mt-4 font-bold">Data de Início</label>
+                    <input type="date" id="osDataInicio" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    
+                    <label class="block mt-4 font-bold">Data de Término</label>
+                    <input type="date" id="osDataTermino" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+
                     <label class="block mt-4 font-bold">Serviço</label>
                     <textarea id="osServico" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    
                     <label class="block mt-4 font-bold">Técnico Responsável</label>
                     <input type="text" id="osTecnico" class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    
+
+                    <h3 class="text-lg font-semibold mt-6 mb-2">Assinatura do Cliente</h3>
+                    <div class="mb-4">
+                        <canvas id="signatureCanvas" class="signature-pad w-full h-40"></canvas>
+                        <button onclick="limparAssinatura()" class="mt-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">Limpar Assinatura</button>
+                    </div>
+
                     <div class="flex justify-end gap-4 mb-8">
                       <button onclick="limparFormulario('os')" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Limpar</button>
                       <button onclick="salvarRegistro('os')" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Salvar</button>
@@ -228,14 +249,43 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Variável global para o pad de assinatura
+        let signaturePad;
+
         // Mostrar seções
         function mostrarPagina(id) {
-          document.getElementById("main-menu").classList.add("hidden");
-          document.querySelectorAll("section").forEach(sec => sec.classList.add("hidden"));
-          document.getElementById(id).classList.remove("hidden");
-          if(id === 'orcamento') {
-             inicializarOrcamento();
-          }
+            document.getElementById("main-menu").classList.add("hidden");
+            document.querySelectorAll("section").forEach(sec => sec.classList.add("hidden"));
+            document.getElementById(id).classList.remove("hidden");
+            if(id === 'orcamento') {
+                inicializarOrcamento();
+            } else if (id === 'os') {
+                inicializarAssinatura();
+            }
+        }
+
+        // Inicializar a assinatura
+        function inicializarAssinatura() {
+            const canvas = document.getElementById('signatureCanvas');
+            signaturePad = new SignaturePad(canvas, {
+                backgroundColor: 'rgb(255, 255, 255)'
+            });
+            // Responsividade do canvas
+            function resizeCanvas() {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+                signaturePad.clear();
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+        }
+
+        function limparAssinatura() {
+            if (signaturePad) {
+                signaturePad.clear();
+            }
         }
 
         // Voltar ao menu principal
@@ -344,9 +394,11 @@
                 dados.total = document.getElementById('total-orcamento').textContent;
             } else {
                 dados.cliente = document.getElementById("osCliente").value;
+                dados.dataInicio = document.getElementById("osDataInicio").value;
+                dados.dataTermino = document.getElementById("osDataTermino").value;
                 dados.servico = document.getElementById("osServico").value;
                 dados.tecnico = document.getElementById("osTecnico").value;
-                // A parte de equipamentos foi removida
+                dados.assinatura = signaturePad.isEmpty() ? null : signaturePad.toDataURL();
             }
 
             try {
@@ -390,9 +442,11 @@
             inicializarOrcamento();
           } else {
             document.getElementById("osCliente").value = "";
+            document.getElementById("osDataInicio").value = "";
+            document.getElementById("osDataTermino").value = "";
             document.getElementById("osServico").value = "";
             document.getElementById("osTecnico").value = "";
-            // A parte de equipamentos foi removida
+            limparAssinatura();
           }
           alert("✔️ Formulário limpo!");
         }
@@ -563,6 +617,9 @@
                   const cliente = document.getElementById('osCliente').value;
                   const servico = document.getElementById('osServico').value;
                   const tecnico = document.getElementById('osTecnico').value;
+                  const dataInicio = document.getElementById('osDataInicio').value;
+                  const dataTermino = document.getElementById('osDataTermino').value;
+
                   const numero = gerarNumero();
                   let y = 45;
                   
@@ -579,20 +636,39 @@
                   doc.text(`Cliente: ${cliente}`, 20, y);
                   y += 7;
                   doc.text(`Técnico Responsável: ${tecnico}`, 20, y);
-                  y += 10;
-
+                  y += 7;
+                  if (dataInicio) {
+                      doc.text(`Data de Início: ${dataInicio.split('-').reverse().join('/')}`, 20, y);
+                      y += 7;
+                  }
+                  if (dataTermino) {
+                      doc.text(`Data de Término: ${dataTermino.split('-').reverse().join('/')}`, 20, y);
+                      y += 7;
+                  }
+                  
+                  y += 3;
                   doc.setFontSize(14);
                   doc.text("Serviço Executado", 20, y);
                   y += 7;
                   doc.setFontSize(12);
                   const splitServico = doc.splitTextToSize(servico, 170);
                   doc.text(splitServico, 20, y);
-                  y += (splitServico.length * 5) + 20;
+                  y += (splitServico.length * 5) + 10;
                   
-                  doc.setDrawColor(220, 220, 220);
-                  doc.line(60, y, 150, y);
-                  y += 5;
-                  doc.text("Assinatura do Cliente", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
+                  // Assinatura sempre no rodapé
+                  const signatureData = signaturePad.toDataURL();
+                  if (signatureData) {
+                      const sigY = doc.internal.pageSize.getHeight() - 40;
+                      doc.addImage(signatureData, 'PNG', 20, sigY - 20, 100, 20);
+                      doc.setDrawColor(220, 220, 220);
+                      doc.line(20, sigY, 120, sigY);
+                      doc.text("Assinatura do Cliente", doc.internal.pageSize.getWidth() / 2, sigY + 5, { align: "center" });
+                  } else {
+                      const sigY = doc.internal.pageSize.getHeight() - 25;
+                      doc.setDrawColor(220, 220, 220);
+                      doc.line(60, sigY, 150, sigY);
+                      doc.text("Assinatura do Cliente", doc.internal.pageSize.getWidth() / 2, sigY + 5, { align: "center" });
+                  }
 
                   doc.save(`os-${numero}.pdf`);
               }
@@ -615,10 +691,26 @@
           snap.forEach(docSnap => {
             const d = docSnap.data();
             const tr = document.createElement("tr");
-            tr.innerHTML = `<td>${d.numero || ""}</td><td>${d.cliente.nome || ""}</td><td>${d.data.split("T")[0]}</td>
-              <td><button onclick="editarRegistro('${tipo}','${docSnap.id}')" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">Editar</button></td>`;
+            tr.innerHTML = `<td>${d.numero || ""}</td><td>${d.cliente.nome || d.cliente || ""}</td><td>${d.data.split("T")[0]}</td>
+              <td><button onclick="editarRegistro('${tipo}','${docSnap.id}')" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors mr-2">Editar</button>
+              <button onclick="excluirRegistro('${tipo}','${docSnap.id}')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Excluir</button></td>`;
             tbody.appendChild(tr);
           });
+        }
+        
+        // Excluir registro com confirmação
+        async function excluirRegistro(tipo, id) {
+            const confirmacao = confirm("Tem certeza que deseja excluir este registro? Esta ação é irreversível.");
+            if (confirmacao) {
+                try {
+                    await db.collection(tipo).doc(id).delete();
+                    alert("🗑️ Registro excluído com sucesso!");
+                    consultarRegistros();
+                } catch (err) {
+                    console.error("Erro ao excluir registro: ", err);
+                    alert("⚠️ Erro ao excluir registro. Tente novamente.");
+                }
+            }
         }
 
         // Editar registro
@@ -650,6 +742,9 @@
             document.getElementById("osCliente").value = d.cliente || "";
             document.getElementById("osServico").value = d.servico || "";
             document.getElementById("osTecnico").value = d.tecnico || "";
+            document.getElementById("osDataInicio").value = d.dataInicio || "";
+            document.getElementById("osDataTermino").value = d.dataTermino || "";
+            limparAssinatura(); // Sempre limpa a assinatura para que uma nova possa ser feita
           }
         }
     </script>
